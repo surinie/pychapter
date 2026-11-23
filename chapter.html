@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>평(坪)</title>
+<style>
+@font-face {
+  font-family: 'BookkGothic';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2302@1.0/BookkGothic-Lt.woff2') format('woff2');
+  font-weight: 300;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'BookkGothic';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2302@1.0/BookkGothic-Bd.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --yellow: #FFF001;
+  --paper: #F6F6F6;
+  --ink: #000;
+  --s: 1;        /* 화면 / 디자인(1728x1117) 비율 — JS에서 갱신 */
+  --R: 10px;     /* 흰 면 border-radius (타이틀과 동일) */
+  --gap: 14px;   /* 모서리 선 틈 (R + 4) */
+  --line: 2px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'BookkGothic', sans-serif;
+  color: var(--ink);
+  background: #000;
+  transition: background-color .9s ease;
+}
+body.rooms-on { background: var(--yellow); }
+
+/* ---------- 인트로 (검정 화면 텍스트) ---------- */
+.intro {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--s));
+  transform-origin: 50% 50%;
+  width: 1728px;
+  text-align: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 1.8;
+  letter-spacing: -0.2px;
+  opacity: 0;
+  transition: opacity .9s ease;
+  pointer-events: none;
+}
+.intro.show { opacity: 1; }
+
+/* ---------- 건너뛰기: 오른쪽 위 고정 ---------- */
+.skip {
+  position: fixed;
+  right: calc(45px * var(--s));
+  top: calc(42px * var(--s));
+  transform: scale(var(--s));
+  transform-origin: 100% 0;
+  font-family: inherit;
+  font-weight: 300;
+  font-size: 30px;
+  line-height: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid currentColor;
+  padding: 0 6px 6px;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--ink);
+  /* 인트로 중에는 숨김 → 호실 화면에서 등장 */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .9s ease .3s, visibility 0s linear 1.2s;
+}
+body.rooms-on .skip {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .9s ease .3s, visibility 0s;
+}
+.skip:hover { font-weight: 700; }
+
+/* ---------- 호실 배치 (1728x1117 캔버스, 화면 중앙 고정) ---------- */
+.rooms {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 1728px;
+  height: 1117px;
+  transform: translate(-50%, -50%) scale(var(--s));
+  transform-origin: 50% 50%;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .9s ease .3s, visibility 0s linear 1.2s;
+}
+body.rooms-on .rooms {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity .9s ease .3s, visibility 0s;
+}
+
+.room {
+  position: absolute;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: default;
+}
+
+/* 흰 면 */
+.room::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--R);
+  background: var(--paper);
+  opacity: 0;
+  transition: opacity .8s ease;
+}
+.room.active::before { opacity: 1; transition-delay: 1.2s; }
+.room.active { cursor: pointer; }
+
+/* 모서리마다 끊긴 선 */
+.room .e { position: absolute; background: var(--ink); }
+.room .t, .room .b { left: var(--gap); right: var(--gap); height: var(--line); }
+.room .l, .room .r { top: var(--gap); bottom: var(--gap); width: var(--line); }
+.room .t { top: 0; }
+.room .b { bottom: 0; }
+.room .l { left: 0; }
+.room .r { right: 0; }
+
+/* 명패 png — .room 안에 들어 있어 칸과 함께 움직임 (상대위치 고정) */
+.plate {
+  position: absolute;
+  left: 50%;
+  top: 18px;
+  width: 180px;
+  transform: translateX(-50%);
+  display: block;
+}
+</style>
+</head>
+<body>
+
+<p class="intro" id="intro"></p>
+
+<!-- 칸(직사각형) + 명패 png 를 한 그룹으로 묶음 -->
+<div class="rooms" id="rooms">
+  <div class="room" data-room="101" style="left:352px;top:99px;width:234px;height:285px;">
+    <span class="e t"></span><span class="e b"></span><span class="e l"></span><span class="e r"></span>
+    <img class="plate" src="101.png" alt="101호">
+  </div>
+  <div class="room" data-room="102" style="left:84px;top:428px;width:234px;height:285px;">
+    <span class="e t"></span><span class="e b"></span><span class="e l"></span><span class="e r"></span>
+    <img class="plate" src="102.png" alt="102호">
+  </div>
+  <div class="room" data-room="103" style="left:1412px;top:427px;width:234px;height:285px;">
+    <span class="e t"></span><span class="e b"></span><span class="e l"></span><span class="e r"></span>
+    <img class="plate" src="103.png" alt="103호">
+  </div>
+  <div class="room" data-room="104" style="left:881px;top:757px;width:234px;height:285px;">
+    <span class="e t"></span><span class="e b"></span><span class="e l"></span><span class="e r"></span>
+    <img class="plate" src="104.png" alt="104호">
+  </div>
+  <div class="room" data-room="105" style="left:1415px;top:757px;width:234px;height:285px;">
+    <span class="e t"></span><span class="e b"></span><span class="e l"></span><span class="e r"></span>
+    <img class="plate" src="105.png" alt="105호">
+  </div>
+</div>
+
+<button class="skip" id="skip" type="button">건너뛰기</button>
+
+<script>
+(() => {
+  /* ---------- 화면 맞춤 ---------- */
+  const W = 1728, H = 1117;
+  function fit() {
+    const s = Math.min(innerWidth / W, innerHeight / H);
+    document.documentElement.style.setProperty('--s', s);
+  }
+  addEventListener('resize', fit); fit();
+
+  /* ---------- 인트로 문장 ---------- */
+  const LINES = [
+    '보증금 백만 원, 월세 이십오만 원. 이 이상은 낼 수 없다.',
+    '원룸 하나 정도는 구할 수 있겠지,<br>아니면 옥탑이라도.'
+  ];
+  const FADE = 900;    // 페이드 시간(ms) — CSS transition과 동일
+  const HOLD = 2000;   // 문장 유지 시간(ms)
+
+  const ORDER = ['101', '102', '103', '104', '105'];   // 입장 순서
+
+  /* ---------- 진행 상황 저장 ---------- */
+  const KEY = 'pyeong-progress';
+  const store = {
+    get() { try { return parseInt(localStorage.getItem(KEY) || '0', 10) || 0; } catch (e) { return 0; } },
+    set(v) { try { localStorage.setItem(KEY, String(v)); } catch (e) {} }
+  };
+  // chapter.html?reset 으로 처음부터 다시
+  if (new URLSearchParams(location.search).has('reset')) store.set(0);
+  const progress = Math.min(store.get(), ORDER.length);
+  const nextRoom = ORDER[progress];        // 다 돌았으면 undefined
+
+  /* ---------- 다음 칸 활성화 ---------- */
+  document.querySelectorAll('.room').forEach(el => {
+    const no = el.dataset.room;
+    if (no !== nextRoom) { el.setAttribute('aria-disabled', 'true'); return; }
+    el.classList.add('active');
+    el.setAttribute('role', 'link');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('aria-label', `${no}호 입장`);
+    const enter = () => { store.set(progress + 1); location.href = `${no}.html`; };
+    el.addEventListener('click', enter);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') enter(); });
+  });
+
+  /* ---------- 장면 전환 ---------- */
+  const intro = document.getElementById('intro');
+  const skip  = document.getElementById('skip');
+  const wait  = ms => new Promise(r => setTimeout(r, ms));
+  let roomsShown = false;
+
+  function showRooms() {
+    if (roomsShown) return;
+    roomsShown = true;
+    intro.classList.remove('show');
+    document.body.classList.add('rooms-on');
+  }
+
+  async function playIntro() {
+    await wait(500);
+    for (const line of LINES) {
+      if (roomsShown) return;
+      intro.innerHTML = line;
+      intro.classList.add('show');
+      await wait(FADE + HOLD);
+      if (roomsShown) return;
+      intro.classList.remove('show');
+      await wait(FADE + 200);
+    }
+    showRooms();
+  }
+
+  // 건너뛰기: 호실 화면에서만 노출. 이동할 곳이 정해지면 여기에 연결
+  skip.addEventListener('click', () => {
+    // location.href = '...';
+  });
+
+  // 한 번이라도 입장했다면 인트로 없이 호실 화면부터
+  if (progress > 0) {
+    document.body.style.transition = 'none';
+    showRooms();
+    requestAnimationFrame(() => { document.body.style.transition = ''; });
+  } else {
+    playIntro();
+  }
+})();
+</script>
+</body>
+</html>
